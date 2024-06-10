@@ -28,10 +28,12 @@ limitations under the License.
 
 // extern const uint8_t no_30ms_start[]          asm("_binary_no_30ms_wav_start");
 // extern const uint8_t yes_30ms_start[]         asm("_binary_yes_30ms_wav_start");
+/*
 extern const uint8_t yes_1000ms_start[]       asm("_binary_yes_1000ms_wav_start");
 extern const uint8_t no_1000ms_start[]        asm("_binary_no_1000ms_wav_start");
 extern const uint8_t noise_1000ms_start[]     asm("_binary_noise_1000ms_wav_start");
 extern const uint8_t silence_1000ms_start[]   asm("_binary_silence_1000ms_wav_start");
+*/
 
 Features g_features;
 const char *TAG = "feature_provider";
@@ -61,7 +63,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
   const int last_step = (last_time_in_ms / kFeatureStrideMs);
   const int current_step = (time_in_ms / kFeatureStrideMs);
 
-  int slices_needed = current_step - last_step;
+  int slices_needed = kFeatureCount; //current_step - last_step;
   // If this is the first call, make sure we don't use any cached information.
   if (is_first_run_) {
     TfLiteStatus init_status = InitializeMicroFeatures();
@@ -140,6 +142,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
     }
   }
 #elif 1
+  /*
     *how_many_new_slices = kFeatureCount;
     int16_t* audio_samples = nullptr;
     int audio_samples_size = 0;
@@ -179,6 +182,7 @@ TfLiteStatus FeatureProvider::PopulateFeatureData(
       }
     }
     vTaskDelay(pdMS_TO_TICKS(500));
+    */
 #else
     *how_many_new_slices = kFeatureCount;
     int16_t* audio_samples = nullptr;

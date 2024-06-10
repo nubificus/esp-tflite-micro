@@ -22,6 +22,9 @@ limitations under the License.
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "main_functions.h"
+#include "wifi.h"
+#include "tcp_client.h"
+#include "nvs_flash.h"
 
 void tf_main(void) {
   setup();
@@ -31,6 +34,20 @@ void tf_main(void) {
 }
 
 extern "C" void app_main() {
-  xTaskCreate((TaskFunction_t)&tf_main, "tensorflow", 8 * 1024, NULL, 8, NULL);
-  vTaskDelete(NULL);
+	
+	esp_err_t ret = nvs_flash_init();
+	if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		ret = nvs_flash_init();
+	}
+    	ESP_ERROR_CHECK(ret);    	
+	
+	esp_err_t status = connect_wifi("ssid", "passwd");
+	if (WIFI_SUCCESS != status) {
+		ESP_LOGI("main", "Failed to associate to AP, dying...");
+		return;
+	}
+
+	xTaskCreate((TaskFunction_t)&tf_main, "tensorflow", 8 * 1024, NULL, 8, NULL);
+	vTaskDelete(NULL);
 }

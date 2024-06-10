@@ -14,7 +14,9 @@ limitations under the License.
 ==============================================================================*/
 
 #include "audio_provider.h"
+#include "tcp_client.h"
 
+#include <unistd.h>
 #include <cstdlib>
 #include <cstring>
 
@@ -186,6 +188,7 @@ TfLiteStatus InitAudioRecording() {
   return kTfLiteOk;
 }
 
+
 TfLiteStatus GetAudioSamples1(int* audio_samples_size, int16_t** audio_samples)
 {
   if (!g_is_audio_initialized) {
@@ -206,6 +209,7 @@ TfLiteStatus GetAudioSamples1(int* audio_samples_size, int16_t** audio_samples)
   return kTfLiteOk;
 }
 
+#if 0
 TfLiteStatus GetAudioSamples(int start_ms, int duration_ms,
                              int* audio_samples_size, int16_t** audio_samples) {
   if (!g_is_audio_initialized) {
@@ -243,6 +247,50 @@ TfLiteStatus GetAudioSamples(int start_ms, int duration_ms,
   *audio_samples_size = kMaxAudioSampleSize;
   *audio_samples = g_audio_output_buffer;
   return kTfLiteOk;
+}
+#endif
+
+static int connected = 0;
+static int sock = -1;
+static char rx_buffer[640];
+static const char *host_ip = "192.168.1.170";
+static uint16_t port = 1234;
+
+TfLiteStatus GetAudioSamples(int start_ms, int duration_ms,
+              int* audio_samples_size, int16_t** audio_samples) {
+    
+	if (!connected) {
+		sock = connect_to_server(host_ip, port);
+		if (sock  == -1)
+			vTaskDelete(NULL);
+
+		connected = 1;
+	}
+
+	if (next_chunk(sock, rx_buffer, sizeof(rx_buffer)) < 0) {
+		close(sock);
+		vTaskDelete(NULL);
+        }
+
+	/* copy 160 samples (320 bytes) into output_buff from history */
+	memcpy((void*)(g_audio_output_buffer), (void*)(g_history_buffer), 320);
+
+	/* 
+	 * 
+	 * copy 320 samples (640 bytes) from 
+	 * audio data (next chunk) at 
+	 * (int16_t*(g_audio_output_buffer) +* 160 ), 
+	 * first 160 samples (320 bytes) will be from history 
+	 *
+	 * */
+	memcpy(((uint8_t*)(g_audio_output_buffer + history_samples_to_keep)), rx_buffer, 640);
+
+	/* copy 320 bytes from output_buff into history */
+	memcpy((void*) g_history_buffer, (void*)(g_audio_output_buffer + new_samples_to_get), 320);
+
+	*audio_samples_size = kMaxAudioSampleSize;
+  	*audio_samples = g_audio_output_buffer;
+  	return kTfLiteOk;
 }
 
 int32_t LatestAudioTimestamp() { return g_latest_audio_timestamp; }

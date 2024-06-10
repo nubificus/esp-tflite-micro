@@ -5,10 +5,10 @@
 
 idf_component_register(
     SRCS main.cc main_functions.cc audio_provider.cc feature_provider.cc
-         no_micro_features_data.cc yes_micro_features_data.cc
+#        no_micro_features_data.cc yes_micro_features_data.cc
          model.cc recognize_commands.cc command_responder.cc
-         micro_features_generator.cc ringbuf.c
-    PRIV_REQUIRES spi_flash driver esp_timer test_data
+         micro_features_generator.cc ringbuf.c wifi.c tcp_client.c
+    PRIV_REQUIRES spi_flash driver esp_timer esp_netif esp_wifi test_data nvs_flash
     INCLUDE_DIRS "")
 
     # Reduce the level of paranoia to be able to compile sources
