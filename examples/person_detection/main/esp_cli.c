@@ -24,6 +24,11 @@
 #include "esp_cli.h"
 #include "esp_timer.h"
 
+#include <unistd.h>
+#include "tcp_client.h"
+
+#if 0
+
 #define IMAGE_COUNT 10
 static uint8_t *image_database[IMAGE_COUNT];
 
@@ -171,14 +176,42 @@ static void image_database_init()
 
 }
 
+#endif
+static const char *TAG = "[esp_cli]";
+static const char *host_ip = "192.168.1.170";
+static uint16_t port = 1234;
+static uint8_t image_buf[9216];
+
 int esp_cli_start()
 {
-    image_database_init();
+    /* image_database_init(); */
     static int cli_started;
     if (cli_started) {
         return 0;
     }
 
+    int sock = connect_to_server(host_ip, port);
+    
+    if (sock  == -1) {
+        ESP_LOGE(TAG, "Failed to Connect");
+        vTaskDelete(NULL);
+    }
+
+    while (1) {
+       	/* ESP_LOGI(TAG, "Request to read Image"); */
+        if (next_image(sock, (void*) image_buf, sizeof(image_buf)) < 0) {
+	    ESP_LOGE(TAG, "Failed to receive image");
+	    close(sock);
+	    vTaskDelete(NULL);
+        }
+
+	/* ESP_LOGI(TAG, "Read new Image"); */
+
+	run_inference((void*) &image_buf[0]);
+    	vTaskDelay(5);
+    }
+
+#if 0
     esp_console_repl_t *repl = NULL;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
 
@@ -200,6 +233,7 @@ int esp_cli_start()
 #error Unsupported console type
 #endif
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
+#endif
     cli_started = 1;
     return 0;
 }

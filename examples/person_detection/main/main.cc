@@ -21,6 +21,9 @@ limitations under the License.
 
 #include "esp_main.h"
 
+#include "wifi.h"
+#include "nvs_flash.h"
+
 #if CLI_ONLY_INFERENCE
 #include "esp_cli.h"
 #endif
@@ -38,6 +41,23 @@ void tf_main(void) {
 }
 
 extern "C" void app_main() {
+  
+  esp_err_t ret = nvs_flash_init();
+  
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  
+  ESP_ERROR_CHECK(ret);    	
+	
+  esp_err_t status = connect_wifi("ssid", "password");
+  
+  if (WIFI_SUCCESS != status) {
+    ESP_LOGI("main", "Failed to associate to AP, dying...");
+    return;
+  }
+
   xTaskCreate((TaskFunction_t)&tf_main, "tf_main", 4 * 1024, NULL, 8, NULL);
   vTaskDelete(NULL);
 }
