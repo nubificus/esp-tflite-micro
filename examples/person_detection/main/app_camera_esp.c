@@ -14,6 +14,8 @@ limitations under the License.
 ==============================================================================*/
 
 #include "app_camera_esp.h"
+#include "esp_camera.h"
+#include "camera_pin.h"
 #include "sdkconfig.h"
 
 #if (CONFIG_TFLITE_USE_BSP)
@@ -23,58 +25,35 @@ limitations under the License.
 static const char *TAG = "app_camera";
 
 int app_camera_init() {
-#if ESP_CAMERA_SUPPORTED
-#if CONFIG_CAMERA_MODULE_ESP_EYE || CONFIG_CAMERA_MODULE_ESP32_CAM_BOARD
-  /* IO13, IO14 is designed for JTAG by default,
-   * to use it as generalized input,
-   * firstly declare it as pullup input */
-  gpio_config_t conf;
-  conf.mode = GPIO_MODE_INPUT;
-  conf.pull_up_en = GPIO_PULLUP_ENABLE;
-  conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-  conf.intr_type = GPIO_INTR_DISABLE;
-  conf.pin_bit_mask = 1LL << 13;
-  gpio_config(&conf);
-  conf.pin_bit_mask = 1LL << 14;
-  gpio_config(&conf);
-#endif // CONFIG_CAMERA_MODULE_ESP_EYE || CONFIG_CAMERA_MODULE_ESP32_CAM_BOARD
+  camera_config_t config = {
+	.pin_pwdn = CAM_PIN_PWDN,
+	.pin_reset = CAM_PIN_RESET,
+	.pin_xclk = CAM_PIN_XCLK,
+	.pin_sscb_sda = CAM_PIN_SIOD,
+	.pin_sscb_scl = CAM_PIN_SIOC,
 
-#if (CONFIG_TFLITE_USE_BSP)
-  bsp_i2c_init();
-  camera_config_t config = BSP_CAMERA_DEFAULT_CONFIG;
+	.pin_d7 = CAM_PIN_D7,
+	.pin_d6 = CAM_PIN_D6,
+	.pin_d5 = CAM_PIN_D5,
+	.pin_d4 = CAM_PIN_D4,
+	.pin_d3 = CAM_PIN_D3,
+	.pin_d2 = CAM_PIN_D2,
+	.pin_d1 = CAM_PIN_D1,
+	.pin_d0 = CAM_PIN_D0,
+	.pin_vsync = CAM_PIN_VSYNC,
+	.pin_href = CAM_PIN_HREF,
+	.pin_pclk = CAM_PIN_PCLK,
 
-#else // CONFIG_TFLITE_USE_BSP
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = CAMERA_PIN_D0;
-  config.pin_d1 = CAMERA_PIN_D1;
-  config.pin_d2 = CAMERA_PIN_D2;
-  config.pin_d3 = CAMERA_PIN_D3;
-  config.pin_d4 = CAMERA_PIN_D4;
-  config.pin_d5 = CAMERA_PIN_D5;
-  config.pin_d6 = CAMERA_PIN_D6;
-  config.pin_d7 = CAMERA_PIN_D7;
-  config.pin_xclk = CAMERA_PIN_XCLK;
-  config.pin_pclk = CAMERA_PIN_PCLK;
-  config.pin_vsync = CAMERA_PIN_VSYNC;
-  config.pin_href = CAMERA_PIN_HREF;
-  config.pin_sscb_sda = CAMERA_PIN_SIOD;
-  config.pin_sscb_scl = CAMERA_PIN_SIOC;
-  config.pin_pwdn = CAMERA_PIN_PWDN;
-  config.pin_reset = CAMERA_PIN_RESET;
-  config.xclk_freq_hz = XCLK_FREQ_HZ;
-  config.jpeg_quality = 10;
-  config.fb_count = 2;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
-#endif // CONFIG_TFLITE_USE_BSP
+	.xclk_freq_hz = 10000000,
+	.ledc_timer = LEDC_TIMER_0,
+	.ledc_channel = LEDC_CHANNEL_0,
 
-  // Pixel format and frame size are specific configurations options for this application.
-  // Frame size must be 96x96 pixels to match the trained model.
-  // Pixel format defaults to grayscale to match the trained model.
-  // With display support enabled, the pixel format is RGB565 to match the display. The frame is converted to grayscale before it is passed to the trained model.
-  config.pixel_format = CAMERA_PIXEL_FORMAT;
-  config.frame_size = CAMERA_FRAME_SIZE;
+	.pixel_format = PIXFORMAT_GRAYSCALE, //YUV422,GRAYSCALE,RGB565,JPEG
+	.frame_size = CAMERA_FRAME_SIZE, //QQVGA-UXGA Do not use sizes above QVGA when not JPEG
+
+	.jpeg_quality = 12, //0-63 lower number means higher quality
+	.fb_count = 1		//if more than one, i2s runs in continuous mode. Use only with JPEG
+  };
 
   // camera init
   esp_err_t err = esp_camera_init(&config);
@@ -82,6 +61,7 @@ int app_camera_init() {
     ESP_LOGE(TAG, "Camera init failed with error 0x%x", err);
     return -1;
   }
+
   sensor_t *s = esp_camera_sensor_get();
   s->set_vflip(s, 1); //flip it back
   //initial sensors are flipped vertically and colors are a bit saturated
@@ -90,9 +70,6 @@ int app_camera_init() {
       s->set_brightness(s, 1);  //up the blightness just a bit
       s->set_saturation(s, -2); //lower the saturation
   }
+
   return 0;
-#else // ESP_CAMERA_SUPPORTED
-  ESP_LOGE(TAG, "Camera is not supported for this device!");
-  return -1;
-#endif // ESP_CAMERA_SUPPORTED
 }
