@@ -157,7 +157,7 @@ void loop() {
   extern long long mul_total_time;
 #endif
 
-void run_inference(void *ptr) {
+int run_inference(void *ptr) {
   /* Convert from uint8 picture data to int8 */
   for (int i = 0; i < kNumCols * kNumRows; i++) {
     input->data.int8[i] = ((uint8_t *) ptr)[i] ^ 0x80;
@@ -204,4 +204,6 @@ void run_inference(void *ptr) {
   float no_person_score_f =
       (no_person_score - output->params.zero_point) * output->params.scale;
   RespondToDetection(person_score_f, no_person_score_f);
+
+  return (person_score > no_person_score);
 }

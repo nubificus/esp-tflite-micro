@@ -32,6 +32,7 @@ def main():
     print(f"Loaded {image_count} images.")
 
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((server_ip, server_port))
     server_socket.listen(1)
     print(f"Server listening on {server_ip}:{server_port}")
@@ -47,8 +48,20 @@ def main():
                 break
             if request == b'\x01':  # Request byte from the client
                 conn.sendall(images[image_index])
-                print(f"Sent image {image_index + 1}/{image_count}")
-                image_index = (image_index + 1) % image_count
+            else:
+                break
+
+            resp = conn.recv(1)
+            if resp == b'\x01':
+                print(f"Person {image_index + 1}/{image_count}")
+            elif resp == b'\x00':
+                print(f"No person {image_index + 1}/{image_count}")
+            else:
+                print("Response from ESP32 is corrupted - Stop.")
+                break
+
+            image_index = (image_index + 1) % image_count
+
     except Exception as e:
         print(f"Exception: {e}")
     finally:

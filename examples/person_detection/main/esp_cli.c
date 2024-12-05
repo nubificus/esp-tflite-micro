@@ -178,9 +178,11 @@ static void image_database_init()
 
 #endif
 static const char *TAG = "[esp_cli]";
-static const char *host_ip = "192.168.1.170";
+static const char *host_ip = "192.168.2.2";
 static uint16_t port = 1234;
 static uint8_t image_buf[9216];
+
+unsigned char resp_byte;
 
 int esp_cli_start()
 {
@@ -207,8 +209,12 @@ int esp_cli_start()
 
 	/* ESP_LOGI(TAG, "Read new Image"); */
 
-	run_inference((void*) &image_buf[0]);
-    	vTaskDelay(5);
+	resp_byte = (unsigned char) run_inference((void*) &image_buf[0]);
+	if (resp(sock, resp_byte)) {
+		ESP_LOGE(TAG, "Failed to send response to server");
+		close(sock);
+		vTaskDelete(NULL);
+	}
     }
 
 #if 0

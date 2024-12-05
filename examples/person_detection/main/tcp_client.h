@@ -12,6 +12,8 @@ int connect_to_server(const char *host_ip, uint16_t port);
 
 int next_image(int sock, char *rx_buffer, size_t buffer_size);
 
+int resp(int sock, unsigned char result);
+
 #ifdef __cplusplus
 }
 #endif

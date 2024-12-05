@@ -60,3 +60,13 @@ int next_image(int sock, char *rx_buffer, size_t buffer_size) {
     /* ESP_LOGI(TAG, "Received %d bytes from server", total_len); */
     return total_len;
 }
+
+int resp(int sock, unsigned char result) {
+    int err = send(sock, &result, 1, 0);
+    if (err < 0) {
+        ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+        return -1;
+    }
+
+    return 0;
+}
